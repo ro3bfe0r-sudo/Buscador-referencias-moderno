@@ -70,7 +70,7 @@ df = load_data()
 df.columns = df.columns.str.strip()  # limpiar espacios
 
 # -----------------------------
-# Panel lateral: filtros y orden
+# Panel lateral: filtros y búsqueda
 # -----------------------------
 with st.sidebar:
     st.header("Filtros de búsqueda")
@@ -115,26 +115,10 @@ elif order_by == "Alfabético Z-A":
     results = results.sort_values("Catalog Description", ascending=False)
 
 # -----------------------------
-# Responsive columns
+# Mostrar resultados como tarjetas clicables
 # -----------------------------
-import math
-def get_columns_number():
-    width = st.experimental_get_query_params().get("width", [1200])[0]
-    width = int(width)
-    if width > 1500:
-        return 4
-    elif width > 1000:
-        return 3
-    elif width > 600:
-        return 2
-    else:
-        return 1
+cols_per_row = 3  # puedes ajustar según preferencia
 
-cols_per_row = get_columns_number()
-
-# -----------------------------
-# Mostrar resultados
-# -----------------------------
 if not results.empty:
     st.markdown(f"<h4>Resultados encontrados: {len(results)}</h4>", unsafe_allow_html=True)
     for i in range(0, len(results), cols_per_row):
@@ -148,14 +132,18 @@ if not results.empty:
                     price = f"€ {float(price):,.2f}"
                 image_url = row.get("<Primary Image.|Node|.Deep Link - 160px>", None)
 
+                # Tarjeta clicable
+                link = image_url if image_url and pd.notna(image_url) else "#"
                 st.markdown(
                     f"""
-                    <div class="card">
-                        {'<img src="'+image_url+'">' if image_url and pd.notna(image_url) else ''}
-                        <h4>{item_code}</h4>
-                        <p>{catalog}</p>
-                        <p><b>List Price:</b> {price}</p>
-                    </div>
+                    <a href="{link}" target="_blank" style="text-decoration:none; color:inherit;">
+                        <div class="card">
+                            {'<img src="'+image_url+'">' if image_url and pd.notna(image_url) else ''}
+                            <h4>{item_code}</h4>
+                            <p>{catalog}</p>
+                            <p><b>List Price:</b> {price}</p>
+                        </div>
+                    </a>
                     """,
                     unsafe_allow_html=True
                 )
@@ -167,7 +155,7 @@ else:
 # -----------------------------
 st.markdown("---")
 st.markdown(
-    f"""
+    """
     <p style='text-align:center; color:gray; font-size:0.9em;'>
     Hecho con ❤️ por <b>R. Fernandez | Sales Support</b> | Rápido, fácil y profesional
     </p>
