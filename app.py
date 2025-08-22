@@ -23,7 +23,7 @@ body {{
     border: 1px solid #ddd;
     border-radius: 12px;
     padding: 15px;
-    margin: 10px;
+    margin: 10px 0;
     background-color: #ffffff;
     text-align: center;
     transition: all 0.3s ease-in-out;
@@ -64,10 +64,11 @@ st.markdown(f"<h2 style='text-align: center;'>Buscador de Referencias OMRON</h2>
 @st.cache_data
 def load_data():
     file_path = "BBDD REFERENCIAS 2025 AGOSTO.xlsx"
-    return pd.read_excel(file_path)
+    df = pd.read_excel(file_path)
+    df.columns = df.columns.str.strip()  # limpiar espacios
+    return df
 
 df = load_data()
-df.columns = df.columns.str.strip()  # limpiar espacios
 
 # -----------------------------
 # Panel lateral: filtros y búsqueda
@@ -115,38 +116,35 @@ elif order_by == "Alfabético Z-A":
     results = results.sort_values("Catalog Description", ascending=False)
 
 # -----------------------------
-# Mostrar resultados como tarjetas clicables
+# Limitar resultados para velocidad
 # -----------------------------
-cols_per_row = 3  # puedes ajustar según preferencia
+MAX_ROWS = 100
+display_results = results.head(MAX_ROWS)
 
-if not results.empty:
+# -----------------------------
+# Mostrar tarjetas expandibles
+# -----------------------------
+if not display_results.empty:
     st.markdown(f"<h4>Resultados encontrados: {len(results)}</h4>", unsafe_allow_html=True)
-    for i in range(0, len(results), cols_per_row):
-        cols = st.columns(cols_per_row)
-        for j, (_, row) in enumerate(results.iloc[i:i+cols_per_row].iterrows()):
-            with cols[j]:
-                item_code = row.get("OEE Second Item Number", "N/A")
-                catalog = row.get("Catalog Description", "N/A")
-                price = row.get("List Price ES", "N/A")
-                if pd.notna(price):
-                    price = f"€ {float(price):,.2f}"
-                image_url = row.get("<Primary Image.|Node|.Deep Link - 160px>", None)
-
-                # Tarjeta clicable
-                link = image_url if image_url and pd.notna(image_url) else "#"
-                st.markdown(
-                    f"""
-                    <a href="{link}" target="_blank" style="text-decoration:none; color:inherit;">
-                        <div class="card">
-                            {'<img src="'+image_url+'">' if image_url and pd.notna(image_url) else ''}
-                            <h4>{item_code}</h4>
-                            <p>{catalog}</p>
-                            <p><b>List Price:</b> {price}</p>
-                        </div>
-                    </a>
-                    """,
-                    unsafe_allow_html=True
-                )
+    
+    for idx, row in display_results.iterrows():
+        with st.expander(f"{row['OEE Second Item Number']} - {row['Catalog Description']}", expanded=False):
+            image_url = row.get("<Primary Image.|Node|.Deep Link - 160px>", None)
+            price = row.get("List Price ES", None)
+            price_display = f"€ {float(price):,.2f}" if pd.notna(price) else "N/A"
+            
+            st.markdown(
+                f"""
+                <div class="card">
+                    {'<img src="'+image_url+'">' if image_url and pd.notna(image_url) else ''}
+                    <h4>{row['OEE Second Item Number']}</h4>
+                    <p>{row['Catalog Description']}</p>
+                    <p><b>List Price:</b> {price_display}</p>
+                    <p><b>Stocking Type:</b> {row.get('Stocking Type','N/A')}</p>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 else:
     st.info("⚠️ No se encontraron coincidencias. Ajusta los filtros o el término de búsqueda.")
 
@@ -155,7 +153,7 @@ else:
 # -----------------------------
 st.markdown("---")
 st.markdown(
-    """
+    f"""
     <p style='text-align:center; color:gray; font-size:0.9em;'>
     Hecho con ❤️ por <b>R. Fernandez | Sales Support</b> | Rápido, fácil y profesional
     </p>
